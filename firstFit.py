@@ -13,6 +13,11 @@ data = {
     "partN": {"data" : 0, "filled" : False},
     "partSizes": {"data" : [], "filled" : 0},
     "jobSizes": {"data" : [], "filled" : 0},
+
+    "sets": [[{"P": 0, "J": 0}]], # default partition and job index
+    "setI": 0,
+    "jobI": 0,
+
 }
 
 class utils:
@@ -33,11 +38,15 @@ class utils:
                 s = s.rstrip('.')
         return s
         
-    def getinp(prompt, name, type, variableName="", greaterThan=-float('inf'), lessThan=float('inf'), fallback="", noDataInsert=False):
+    def getinp(prompt, name, type, variableName="", greaterThan=-float('inf'), lessThan=float('inf'), fallback="", append=False, maxLength=50):
         global data
-        if data[variableName]["filled"]:
-            print(fallback)
-            return "Valid"
+        if not append:
+            if data[variableName]["filled"]:
+                print(fallback)
+                return "Valid"
+        else:
+            if len(data[variableName]["data"]) >= maxLength:
+                return "Valid"
         s = input(prompt)
         for o in s:
             if not o in "0123465789-.":
@@ -59,33 +68,14 @@ class utils:
             return f"{name} must be greater than {utils.rstrips(greaterThan)}."
         if float(s) >= lessThan:
             return f"{name} must be less than {utils.rstrips(lessThan)}."
-        if not noDataInsert:
+        if not append:
             data[variableName]["data"] = float(s) if type == "float" else int(s)
             data[variableName]["filled"] = True
+        else:
+            data[variableName]["data"].append(float(s) if type == "float" else int(s))
+            data[variableName]["filled"] += 1
         return "input"
     
-    def getlistinp(prompt, name, type, count, variableName="", greaterThan=-float('inf'), lessThan=float('inf')):
-        global data
-        if data[variableName]["filled"] >= count:
-            print(f"{name}s: {', '.join([utils.rstrips(o) for o in data[variableName]['data']])}")
-            return "Valid"
-        while data[variableName]["filled"] < count:
-            ind_status = utils.getinp(
-                prompt = f"{prompt} {data[variableName]['filled'] + 1}: ",
-                name = name + str(data[variableName]['filled'] + 1),
-                type = type,
-                variableName = f"{variableName}_{data[variableName]['filled']}",
-                greaterThan = greaterThan,
-                lessThan = lessThan,
-                noDataInsert = True,
-                fallback = f"{name} {data[variableName]['filled'] + 1}: {utils.rstrips(data[variableName]['data'][data[variableName]['filled']])}"
-                )
-            if ind_status == "input":
-                data[variableName]["data"].append(float(data[variableName]['data'][data[variableName]['filled']]))
-                data[variableName]["filled"] += 1
-            elif ind_status != "Valid":
-                return ind_status
-
     def pressEnter():
         print("Press enter to continue...", end="")
         input()
@@ -134,12 +124,12 @@ def main():
     
     # Number of Partitions
     partN_status = utils.getinp(
-        prompt = "Enter Number of Partitions: ",
+        prompt = "\nEnter Number of Partitions: ",
         name = "Number of Partitions",
         type = "int",
         variableName = "partN",
         greaterThan = 0,
-        fallback = f"Number of Partitions: {data['partN']['data']}"
+        fallback = f"\nCurrent Partitions ({data['partN']['data']}): {'(Unused Memory ' + str(data['memSize']['data'] - data["osSize"]["data"] - sum(o for o in data['partSizes']['data'])) + 'k)' if data['partSizes']['filled'] < data['partN']['data'] else ''}"
         )
     if partN_status == "input":
         return False # input skip
@@ -149,30 +139,34 @@ def main():
         return False
     
     # Partition Sizes
-    partSizes_status = utils.getlistinp(
-        prompt = "Enter Size of Partition",
-        name = "Partition Size",
-        type = "float",
-        count = data["partN"]["data"],
-        variableName = "partSizes",
-        greaterThan = 0,
-        lessThan = data["memSize"]["data"] - data["osSize"]["data"]
-        )
-    if partSizes_status == "input":
-        return False # input skip
-    elif partSizes_status != "Valid":
-        print(partSizes_status)
-        utils.pressEnter()
-        return False
+    for i in range(data["partSizes"]["filled"]):
+        print(utils.indent(f"Partition {i+1}: {utils.rstrips(data['partSizes']['data'][i])}k"))
+    if data["partSizes"]["filled"] < data["partN"]["data"]:
+        partSize_status = utils.getinp(
+            prompt = utils.indent(f"Enter Partition Size {data['partSizes']['filled'] + 1}: "),
+            name = f"Partition Size {data['partSizes']['filled'] + 1}",
+            type = "float",
+            variableName = "partSizes",
+            greaterThan = 0,
+            append = True,
+            lessThan = data["memSize"]["data"] - data["osSize"]["data"] - sum(o for o in data["partSizes"]["data"]) + 0.001,
+            maxLength = data["partN"]["data"]
+            )
+        if partSize_status == "input":
+            return False # input skip
+        elif partSize_status != "Valid":
+            print(partSize_status)
+            utils.pressEnter()
+            return False
 
     # Number of Jobs
     jobN_status = utils.getinp(
-        prompt = "Enter Number of Jobs: ",
+        prompt = "\nEnter Number of Jobs: ",
         name = "Number of Jobs",
         type = "int",
         variableName = "jobN",
         greaterThan = 0,
-        fallback = f"Number of Jobs: {data['jobN']['data']}"
+        fallback = f"\nCurrent Jobs ({data['jobN']['data']}):"
         )
     if jobN_status == "input":
         return False # input skip
@@ -180,6 +174,39 @@ def main():
         print(jobN_status)
         utils.pressEnter()
         return False
+
+    # Job Sizes
+    for i in range(data["jobSizes"]["filled"]):
+        print(utils.indent(f"Job {i+1}: {utils.rstrips(data['jobSizes']['data'][i])}k"))
+    if data["jobSizes"]["filled"] < data["jobN"]["data"]:
+        jobSize_status = utils.getinp(
+            prompt = utils.indent(f"Enter Job Size {data['jobSizes']['filled'] + 1}: "),
+            name = f"Job Size {data['jobSizes']['filled'] + 1}",
+            type = "float",
+            variableName = "jobSizes",
+            greaterThan = 0,
+            append = True,
+            maxLength = data["jobN"]["data"]
+            )
+        if jobSize_status == "input":
+            return False # input skip
+        elif jobSize_status != "Valid":
+            print(jobSize_status)
+            utils.pressEnter()
+            return False
+
+    # All data collected, perform First Fit
+    print("\nFirst Fit")
+    print("Memory\t| Partition Size\t| Job Allocation")
+    print(f"OS\t| {utils.rstrips(data['osSize']['data'])}k\t\t{'\t| OS'*len(data['sets'])}")
+    
+    if data["setI"] < data[""]:
+        data["setI"] += 1
+        utils.pressEnter()
+        return False
+
+    print(f"\t| \t\t\t| {'\t| '.join('Set '+ str(i+1) for i in range(len(data['sets'])))}")
+
 
 
     return True
