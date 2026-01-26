@@ -9,14 +9,16 @@ data = {
 
     "osSize": {"data" : 0, "filled" : False},
     "memSize": {"data" : 0, "filled" : False},
-    "jobN": {"data" : 0, "filled" : False},
-    "partN": {"data" : 0, "filled" : False},
-    "partSizes": {"data" : [], "filled" : 0},
-    "jobSizes": {"data" : [], "filled" : 0},
+    "jobN": {"data" : 10, "filled" : True},
+    "partN": {"data" : 4, "filled" : True},
+    "partSizes": {"data" : [40,40,40,40], "filled" : 4},
+    "jobSizes": {"data" : [45,50,35,20,25,50,15,20,40,30], "filled" : 10},
 
-    "sets": [[{"P": 0, "J": 0}]], # default partition and job index
+    "sets": [], # default partition and job index
     "setI": 0,
-    "jobI": 0,
+    "jobsAvail": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], # Available jobs : [0, 1, 2, ... n-1] job indexes
+    "setsDealloc": [], # sets that have deallocated jobs
+    "defaultPart": [-1, -1, -1, -1] # default partition
 
 }
 
@@ -38,7 +40,7 @@ class utils:
                 s = s.rstrip('.')
         return s
         
-    def getinp(prompt, name, type, variableName="", greaterThan=-float('inf'), lessThan=float('inf'), fallback="", append=False, maxLength=50):
+    def getinp(prompt, name, type, variableName="", greaterThan=-float('inf'), lessThan=float('inf'), fallback="", append=False, maxLength=50, lessThatEqual=False):
         global data
         if not append:
             if data[variableName]["filled"]:
@@ -66,8 +68,12 @@ class utils:
             return f"An error has occured: {e}."
         if float(s) <= greaterThan:
             return f"{name} must be greater than {utils.rstrips(greaterThan)}."
-        if float(s) >= lessThan:
-            return f"{name} must be less than {utils.rstrips(lessThan)}."
+        if lessThatEqual:
+            if float(s) > lessThan:
+                return f"{name} must be less than or equal to {utils.rstrips(lessThan)}."
+        else:
+            if float(s) >= lessThan:
+                return f"{name} must be less than {utils.rstrips(lessThan)}."
         if not append:
             data[variableName]["data"] = float(s) if type == "float" else int(s)
             data[variableName]["filled"] = True
@@ -82,6 +88,23 @@ class utils:
         
     def indent(data):
         return " "*4 + data
+    
+    def displayTable(table):
+        if not table:
+            return
+        max_cols = max(len(row) for row in table)
+        col_widths = [max(len(str(row[i])) for row in table if i < len(row)) for i in range(max_cols)]
+        for row in table:
+            padded_row = row + [""] * (max_cols - len(row))
+            result = []
+            for i, item in enumerate(padded_row):
+                formatted_item = str(item).ljust(col_widths[i])
+                result.append(formatted_item)
+                if i < len(padded_row) - 1:  # Not the last item
+                    # Add separator only if next item is non-empty
+                    if str(padded_row[i + 1]).strip() != "":
+                        result.append(" | ")
+            print("".join(result))
 
 
 def main():
@@ -132,6 +155,7 @@ def main():
         fallback = f"\nCurrent Partitions ({data['partN']['data']}): {'(Unused Memory ' + str(data['memSize']['data'] - data["osSize"]["data"] - sum(o for o in data['partSizes']['data'])) + 'k)' if data['partSizes']['filled'] < data['partN']['data'] else ''}"
         )
     if partN_status == "input":
+        data["defaultPart"] = [-1 for _ in range(data["partN"]["data"])]
         return False # input skip
     elif partN_status != "Valid":
         print(partN_status)
@@ -142,6 +166,7 @@ def main():
     for i in range(data["partSizes"]["filled"]):
         print(utils.indent(f"Partition {i+1}: {utils.rstrips(data['partSizes']['data'][i])}k"))
     if data["partSizes"]["filled"] < data["partN"]["data"]:
+        unused_mem = data["memSize"]["data"] - data["osSize"]["data"] - sum(o for o in data["partSizes"]["data"])
         partSize_status = utils.getinp(
             prompt = utils.indent(f"Enter Partition Size {data['partSizes']['filled'] + 1}: "),
             name = f"Partition Size {data['partSizes']['filled'] + 1}",
@@ -149,10 +174,18 @@ def main():
             variableName = "partSizes",
             greaterThan = 0,
             append = True,
-            lessThan = data["memSize"]["data"] - data["osSize"]["data"] - sum(o for o in data["partSizes"]["data"]) + 0.001,
-            maxLength = data["partN"]["data"]
+            lessThan = unused_mem,
+            maxLength = data["partN"]["data"],
+            lessThatEqual = True
             )
         if partSize_status == "input":
+            if unused_mem - data["partSizes"]["data"][-1] == 0 and data["partSizes"]["filled"] < data["partN"]["data"]:
+                # remove last partition added
+                data["partSizes"]["data"].pop()
+                data["partSizes"]["filled"] -= 1
+                print(f"No unused memory left to allocate remaining partitions.")
+                utils.pressEnter()
+                return False
             return False # input skip
         elif partSize_status != "Valid":
             print(partSize_status)
@@ -169,6 +202,7 @@ def main():
         fallback = f"\nCurrent Jobs ({data['jobN']['data']}):"
         )
     if jobN_status == "input":
+        data["jobsAvail"] = [i for i in range(data["jobN"]["data"])]
         return False # input skip
     elif jobN_status != "Valid":
         print(jobN_status)
@@ -194,18 +228,78 @@ def main():
             print(jobSize_status)
             utils.pressEnter()
             return False
+    
 
     # All data collected, perform First Fit
     print("\nFirst Fit")
-    print("Memory\t| Partition Size\t| Job Allocation")
-    print(f"OS\t| {utils.rstrips(data['osSize']['data'])}k\t\t{'\t| OS'*len(data['sets'])}")
+    table = []
+
+    # print("Memory\t| Part Size\t| Job Allocation")
+    table.append(["Memory", "Part Size", "Job Allocation"])
     
-    if data["setI"] < data[""]:
+    # print(f"OS\t| {utils.rstrips(data['osSize']['data'])}k\t{'\t| OS'*len(data['sets'])}")
+    table.append(["OS", f"{utils.rstrips(data['osSize']['data'])}k"] + ["OS"] + ["OS" for _ in range(len(data["sets"]))])
+
+    # calculate set
+    if len(data["sets"]) == 0:
+        data["sets"].append(data["defaultPart"].copy()) # add new set
+    else:
+        data["sets"].append(data["sets"][-1].copy()) # add new set from previous set with the deallocations applied
+        prev_set = data["sets"][data["setI"]]
+        allocated_jobs = [job for job in prev_set if job != -1]
+        allocated_jobs.sort(key=lambda x: data["jobSizes"]["data"][x])
+        jobs_to_deallocate = allocated_jobs[:2] # 2 smallest jobs
+        for job in jobs_to_deallocate:
+            for p in range(data["partN"]["data"]):
+                if data["sets"][data["setI"]][p] == job:
+                    data["sets"][data["setI"]][p] = -1
+
+    # allocating jobs
+    toremove = []
+    for i in data["jobsAvail"]:
+        for p in range(data["partN"]["data"]):
+            if data["sets"][data["setI"]][p] == -1 and data["jobSizes"]["data"][i] <= data["partSizes"]["data"][p]:
+                data["sets"][data["setI"]][p] = i
+                toremove.append(i)
+                break
+    for i in toremove:
+        data["jobsAvail"].remove(i)
+
+    # deallocating jobs
+    prev_set = data["sets"][data["setI"]]
+    allocated_jobs = [job for job in prev_set if job != -1]
+    allocated_jobs.sort(key=lambda x: data["jobSizes"]["data"][x])
+    deallocated_jobs = allocated_jobs[:2] # 2 smallest jobs
+    data["setsDealloc"].append(deallocated_jobs)
+
+    # display partitions
+    for i in range(data["partN"]["data"]):
+        row = [f"Part {i+1}", f"{utils.rstrips(data['partSizes']['data'][i])}k"]
+        for s in range(len(data["sets"])):
+            if data["sets"][s][i] == -1:
+                row.append("Free")
+            else:
+                ji = data['sets'][s][i]
+                if not ji in data['setsDealloc'][s]:
+                    row.append(f"Job {ji+1} ({utils.rstrips(data['jobSizes']['data'][ji])}k)")
+                else:
+                    row.append(f"Job {ji+1} ({utils.rstrips(data['jobSizes']['data'][ji])}k)*")
+        table.append(row)
+    
+    table.append([" ", f"{utils.rstrips(data['memSize']['data'])}k"] + [f"Set {i+1}" for i in range(len(data["sets"]))])
+
+    utils.displayTable(table)
+
+    if all(o == -1 for o in data["sets"][data["setI"]]) or len(data["jobsAvail"]) == 0:
+        print("\nConclusion:")
+        print("All jobs have been allocated." if len(data["jobsAvail"]) == 0 else "Not all jobs were executed:")
+        for o in data["jobsAvail"]:
+            print(utils.indent(f"Job {o+1} ({utils.rstrips(data['jobSizes']['data'][o])}k)"))
+        print(f"There are {len(data['sets']) - 1} sets of allocations.")
+    else:
         data["setI"] += 1
         utils.pressEnter()
         return False
-
-    print(f"\t| \t\t\t| {'\t| '.join('Set '+ str(i+1) for i in range(len(data['sets'])))}")
 
 
 
