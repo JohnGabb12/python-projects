@@ -114,12 +114,12 @@ def main():
 
     # Memory Size
     memSize_status = utils.getinp(
-        prompt = "Enter Memory Size (k): ",
+        prompt = "Enter Memory Size (M): ",
         name = "Memory Size",
         type = "int",
         variableName = "memSize",
         greaterThan = 0,
-        fallback = f"Memory Size: {data['memSize']['data']}k"
+        fallback = f"Memory Size: {data['memSize']['data']}M"
         )
     if memSize_status == "input":
         return False # input skip
@@ -130,13 +130,13 @@ def main():
     
     # OS Size
     osSize_status = utils.getinp(
-        prompt = "Enter OS Size (k): ",
+        prompt = "Enter OS Size (M): ",
         name = "OS Size",
         type = "float",
         variableName = "osSize",
         greaterThan = 0,
         lessThan = data["memSize"]["data"],
-        fallback = f"OS Size: {utils.rstrips(data['osSize']['data'])}k"
+        fallback = f"OS Size: {utils.rstrips(data['osSize']['data'])}M"
         )
     if osSize_status == "input":
         return False # input skip
@@ -151,7 +151,7 @@ def main():
         name = "Number of Partitions",
         type = "int",
         variableName = "partN",
-        fallback = f"\nCurrent Partitions ({data['partN']['data']}): {'(Unused Memory ' + str(data['memSize']['data'] - data['osSize']['data'] - sum(o for o in data['partSizes']['data'])) + 'k)' if data['partSizes']['filled'] < data['partN']['data'] else ''}"
+        fallback = f"\nCurrent Partitions ({data['partN']['data']}): {'(Unused Memory ' + str(data['memSize']['data'] - data['osSize']['data'] - sum(o for o in data['partSizes']['data'])) + 'M)' if data['partSizes']['filled'] < data['partN']['data'] else ''}"
         )
     if partN_status == "input":
         data["defaultPart"] = [-1 for _ in range(data["partN"]["data"])]
@@ -163,7 +163,7 @@ def main():
     
     # Partition Sizes
     for i in range(data["partSizes"]["filled"]):
-        print(utils.indent(f"Partition {i+1}: {utils.rstrips(data['partSizes']['data'][i])}k"))
+        print(utils.indent(f"Partition {i+1}: {utils.rstrips(data['partSizes']['data'][i])}M"))
     if data["partSizes"]["filled"] < data["partN"]["data"]:
         unused_mem = data["memSize"]["data"] - data["osSize"]["data"] - sum(o for o in data["partSizes"]["data"])
         partSize_status = utils.getinp(
@@ -210,7 +210,7 @@ def main():
 
     # Job Sizes
     for i in range(data["jobSizes"]["filled"]):
-        print(utils.indent(f"Job {i+1}: {utils.rstrips(data['jobSizes']['data'][i])}k"))
+        print(utils.indent(f"Job {i+1}: {utils.rstrips(data['jobSizes']['data'][i])}M"))
     if data["jobSizes"]["filled"] < data["jobN"]["data"]:
         jobSize_status = utils.getinp(
             prompt = utils.indent(f"Enter Job Size {data['jobSizes']['filled'] + 1}: "),
@@ -236,8 +236,8 @@ def main():
     # print("Memory\t| Part Size\t| Job Allocation")
     table.append(["Memory", "Part Size", "Job Allocation"])
     
-    # print(f"OS\t| {utils.rstrips(data['osSize']['data'])}k\t{'\t| OS'*len(data['sets'])}")
-    table.append(["OS", f"{utils.rstrips(data['osSize']['data'])}k"] + ["OS"] + ["OS" for _ in range(len(data["sets"]))])
+    # print(f"OS\t| {utils.rstrips(data['osSize']['data'])}M\t{'\t| OS'*len(data['sets'])}")
+    table.append(["OS", f"{utils.rstrips(data['osSize']['data'])}M"] + ["OS"] + ["OS" for _ in range(len(data["sets"]))])
 
     # calculate set
     if len(data["sets"]) == 0:
@@ -279,19 +279,19 @@ def main():
 
     # display partitions
     for i in range(data["partN"]["data"]):
-        row = [f"Part {i+1}", f"{utils.rstrips(data['partSizes']['data'][i])}k"]
+        row = [f"Part {i+1}", f"{utils.rstrips(data['partSizes']['data'][i])}M"]
         for s in range(len(data["sets"])):
             if data["sets"][s][i] == -1:
                 row.append("Free")
             else:
                 ji = data['sets'][s][i]
                 if not ji in data['setsDealloc'][s]:
-                    row.append(f"Job {ji+1} ({utils.rstrips(data['jobSizes']['data'][ji])}k)")
+                    row.append(f"Job {ji+1} ({utils.rstrips(data['jobSizes']['data'][ji])}M)")
                 else:
-                    row.append(f"Job {ji+1} ({utils.rstrips(data['jobSizes']['data'][ji])}k)*")
+                    row.append(f"Job {ji+1} ({utils.rstrips(data['jobSizes']['data'][ji])}M)*")
         table.append(row)
     
-    table.append([" ", f"{utils.rstrips(data['memSize']['data'])}k"] + [f"Set {i+1}" for i in range(len(data["sets"]))])
+    table.append([" ", f"{utils.rstrips(data['memSize']['data'])}M"] + [f"Set {i+1}" for i in range(len(data["sets"]))])
 
     utils.displayTable(table)
 
@@ -299,7 +299,7 @@ def main():
         print("\nConclusion:")
         print("All jobs have been allocated." if len(data["jobsAvail"]) == 0 else "Not all jobs were executed:")
         for o in data["jobsAvail"]:
-            print(utils.indent(f"Job {o+1} ({utils.rstrips(data['jobSizes']['data'][o])}k)"))
+            print(utils.indent(f"Job {o+1} ({utils.rstrips(data['jobSizes']['data'][o])}M)"))
         print(f"There are {len(data['sets']) - 1} sets of allocations.")
     else:
         data["setI"] += 1
