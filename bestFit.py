@@ -9,16 +9,16 @@ data = {
 
     "osSize": {"data" : 0, "filled" : False},
     "memSize": {"data" : 0, "filled" : False},
-    "jobN": {"data" : 10, "filled" : True},
-    "partN": {"data" : 4, "filled" : True},
-    "partSizes": {"data" : [40,40,40,40], "filled" : 4},
-    "jobSizes": {"data" : [45,50,35,20,25,50,15,20,40,30], "filled" : 10},
+    "jobN": {"data" : 0, "filled" : False},
+    "partN": {"data" : 0, "filled" : False},
+    "partSizes": {"data" : [], "filled" : 0},
+    "jobSizes": {"data" : [], "filled" : 0},
 
     "sets": [], # default partition and job index
     "setI": 0,
-    "jobsAvail": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], # Available jobs : [0, 1, 2, ... n-1] job indexes
+    "jobsAvail": [], # Available jobs : [0, 1, 2, ... n-1] job indexes
     "setsDealloc": [], # sets that have deallocated jobs
-    "defaultPart": [-1, -1, -1, -1] # default partition
+    "defaultPart": [] # default partition
 
 }
 
@@ -151,8 +151,7 @@ def main():
         name = "Number of Partitions",
         type = "int",
         variableName = "partN",
-        greaterThan = 0,
-        fallback = f"\nCurrent Partitions ({data['partN']['data']}): {'(Unused Memory ' + str(data['memSize']['data'] - data["osSize"]["data"] - sum(o for o in data['partSizes']['data'])) + 'k)' if data['partSizes']['filled'] < data['partN']['data'] else ''}"
+        fallback = f"\nCurrent Partitions ({data['partN']['data']}): {'(Unused Memory ' + str(data['memSize']['data'] - data['osSize']['data'] - sum(o for o in data['partSizes']['data'])) + 'k)' if data['partSizes']['filled'] < data['partN']['data'] else ''}"
         )
     if partN_status == "input":
         data["defaultPart"] = [-1 for _ in range(data["partN"]["data"])]
@@ -259,13 +258,15 @@ def main():
     for i in data["jobsAvail"]:
 
         # change to best fit algorithm
+        indx = -1;
+        for j in range(data["partN"]["data"]):
+            if data["sets"][data["setI"]][j] == -1 and data["jobSizes"]["data"][i] <= data["partSizes"]["data"][j]:
+                if indx == -1 or data["partSizes"]["data"][j] < data["partSizes"]["data"][indx]:
+                    indx = j
+        if indx != -1:
+            data["sets"][data["setI"]][indx] = i
+            toremove.append(i)
 
-
-        for p in range(data["partN"]["data"]):
-            if data["sets"][data["setI"]][p] == -1 and data["jobSizes"]["data"][i] <= data["partSizes"]["data"][p]:
-                data["sets"][data["setI"]][p] = i
-                toremove.append(i)
-                break
     for i in toremove:
         data["jobsAvail"].remove(i)
 
