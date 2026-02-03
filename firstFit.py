@@ -301,8 +301,6 @@ def main():
         utils.pressEnter()
         return False
 
-
-
     return True
     
 while not complete:
