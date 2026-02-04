@@ -18,8 +18,9 @@ data = {
     "setI": 0,
     "jobsAvail": [], # Available jobs : [0, 1, 2, ... n-1] job indexes
     "setsDealloc": [], # sets that have deallocated jobs
-    "defaultPart": [] # default partition
+    "defaultPart": [], # default partition
 
+    "deallocating": False
 }
 
 class utils:
@@ -110,7 +111,7 @@ class utils:
 def main():
     global data
     utils.clear()
-    utils.topbar("ML-M3: Act1 Fixed Partition - First Fit")
+    utils.topbar("ML-M3: Act2 Fixed Partition - Best Fit")
 
     # Memory Size
     memSize_status = utils.getinp(
@@ -152,7 +153,7 @@ def main():
         type = "int",
         variableName = "partN",
         greaterThan = 0,
-        fallback = f"\nCurrent Partitions ({data['partN']['data']}): {'(Unused Memory ' + str(data['memSize']['data'] - data['osSize']['data'] - sum(o for o in data['partSizes']['data'])) + 'M)' if data['partSizes']['filled'] < data['partN']['data'] else ''}"
+        fallback = f"\nCurrent Partitions ({data['partN']['data']}):"
         )
     if partN_status == "input":
         data["defaultPart"] = [-1 for _ in range(data["partN"]["data"])]
@@ -165,10 +166,10 @@ def main():
     # Partition Sizes
     for i in range(data["partSizes"]["filled"]):
         print(utils.indent(f"Partition {i+1}: {utils.rstrips(data['partSizes']['data'][i])}M"))
-    if data["partSizes"]["filled"] < data["partN"]["data"]:
+    if data["partSizes"]["filled"] < (data["partN"]["data"]-1):
         unused_mem = data["memSize"]["data"] - data["osSize"]["data"] - sum(o for o in data["partSizes"]["data"])
         partSize_status = utils.getinp(
-            prompt = utils.indent(f"Enter Partition Size {data['partSizes']['filled'] + 1}: "),
+            prompt = utils.indent(f"Enter Partition Size {data['partSizes']['filled'] + 1} {'(Unused Memory ' + str(data['memSize']['data'] - data['osSize']['data'] - sum(o for o in data['partSizes']['data'])) + 'M)' if data['partSizes']['filled'] < data['partN']['data'] else ''}: "),
             name = f"Partition Size {data['partSizes']['filled'] + 1}",
             type = "float",
             variableName = "partSizes",
@@ -186,11 +187,15 @@ def main():
                 print(f"No unused memory left to allocate remaining partitions.")
                 utils.pressEnter()
                 return False
+            if data["partSizes"]["filled"] == (data["partN"]["data"]-1):
+                data["partSizes"]["data"].append(data["memSize"]["data"] - data["osSize"]["data"] - sum(o for o in data["partSizes"]["data"]))
+                data["partSizes"]["filled"] += 1
             return False # input skip
         elif partSize_status != "Valid":
             print(partSize_status)
             utils.pressEnter()
             return False
+
 
     # Number of Jobs
     jobN_status = utils.getinp(
@@ -231,73 +236,82 @@ def main():
     
 
     # All data collected, perform First Fit
-    print("\nFirst Fit")
+    print("\Best Fit")
     table = []
 
-    # print("Memory\t| Part Size\t| Job Allocation")
-    table.append(["Memory", "Part Size", "Job Allocation"])
-    
-    # print(f"OS\t| {utils.rstrips(data['osSize']['data'])}M\t{'\t| OS'*len(data['sets'])}")
-    table.append(["OS", f"{utils.rstrips(data['osSize']['data'])}M"] + ["OS"] + ["OS" for _ in range(len(data["sets"]))])
-
     # calculate set
-    if len(data["sets"]) == 0:
-        data["sets"].append(data["defaultPart"].copy()) # add new set
-    else:
-        data["sets"].append(data["sets"][-1].copy()) # add new set from previous set with the deallocations applied
-        prev_set = data["sets"][data["setI"]]
-        allocated_jobs = [job for job in prev_set if job != -1]
-        allocated_jobs.sort(key=lambda x: data["jobSizes"]["data"][x])
-        jobs_to_deallocate = allocated_jobs[:2] # 2 smallest jobs
-        for job in jobs_to_deallocate:
-            for p in range(data["partN"]["data"]):
-                if data["sets"][data["setI"]][p] == job:
-                    data["sets"][data["setI"]][p] = -1
+    if not data["deallocating"]:
+        if len(data["sets"]) == 0:
+            data["sets"].append(data["defaultPart"].copy()) # add new set
+        else:
+            data["sets"].append(data["sets"][-1].copy()) # add new set from previous set with the deallocations applied
+            prev_set = data["sets"][data["setI"]]
+            allocated_jobs = [job for job in prev_set if job != -1]
+            allocated_jobs.sort(key=lambda x: data["jobSizes"]["data"][x])
+            jobs_to_deallocate = allocated_jobs[:2] # 2 smallest jobs
+            for job in jobs_to_deallocate:
+                for p in range(data["partN"]["data"]):
+                    if data["sets"][data["setI"]][p] == job:
+                        data["sets"][data["setI"]][p] = -1
 
     # allocating jobs
     toremove = []
-    for i in data["jobsAvail"]:
-        for p in range(data["partN"]["data"]):
-            if data["sets"][data["setI"]][p] == -1 and data["jobSizes"]["data"][i] <= data["partSizes"]["data"][p]:
-                data["sets"][data["setI"]][p] = i
-                toremove.append(i)
-                break
-    for i in toremove:
-        data["jobsAvail"].remove(i)
 
-    # deallocating jobs
-    prev_set = data["sets"][data["setI"]]
-    allocated_jobs = [job for job in prev_set if job != -1]
-    allocated_jobs.sort(key=lambda x: data["jobSizes"]["data"][x])
-    deallocated_jobs = allocated_jobs[:2] # 2 smallest jobs
-    data["setsDealloc"].append(deallocated_jobs)
-
-    # display partitions
-    for i in range(data["partN"]["data"]):
-        row = [f"Part {i+1}", f"{utils.rstrips(data['partSizes']['data'][i])}M"]
-        for s in range(len(data["sets"])):
-            if data["sets"][s][i] == -1:
-                row.append("Free")
-            else:
-                ji = data['sets'][s][i]
-                if not ji in data['setsDealloc'][s]:
-                    row.append(f"Job {ji+1} ({utils.rstrips(data['jobSizes']['data'][ji])}M)")
-                else:
-                    row.append(f"Job {ji+1} ({utils.rstrips(data['jobSizes']['data'][ji])}M)*")
-        table.append(row)
+    if not data["deallocating"]:
+        for i in data["jobsAvail"]:
+            for p in range(data["partN"]["data"]):
+                if data["sets"][data["setI"]][p] == -1 and data["jobSizes"]["data"][i] <= data["partSizes"]["data"][p]:
+                    data["sets"][data["setI"]][p] = i
+                    toremove.append(i)
+                    break
+        for i in toremove:
+            data["jobsAvail"].remove(i)
+        
+        # deallocating jobs
+        prev_set = data["sets"][data["setI"]]
+        allocated_jobs = [job for job in prev_set if job != -1]
+        allocated_jobs.sort(key=lambda x: data["jobSizes"]["data"][x])
+        deallocated_jobs = allocated_jobs[:2] # 2 smallest jobs
+        data["setsDealloc"].append(deallocated_jobs)
     
-    table.append([" ", f"{utils.rstrips(data['memSize']['data'])}M"] + [f"Set {i+1}" for i in range(len(data["sets"]))])
+    maxsets = 5
+    lensets = len(data["sets"])
+    for start in range(0, lensets, maxsets):
+        end = min(start + maxsets, lensets) # get min
+        table.append(["Memory", "Part Size", "Job Allocation"])
+        table.append(["OS", f"{utils.rstrips(data['osSize']['data'])}M"] + ["OS" for _ in range(start, end)])
 
-    utils.displayTable(table)
+        # display partitions
+        for i in range(data["partN"]["data"]):
+            row = [f"Part {i+1}", f"{utils.rstrips(data['partSizes']['data'][i])}M"]
+            for s in range(start, end):
+                if data["sets"][s][i] == -1:
+                    row.append("Free")
+                else:
+                    ji = data['sets'][s][i]
+                    if not ji in data['setsDealloc'][s] or (not data["deallocating"] and s == data["setI"]):
+                        row.append(f"Job {ji+1} ({utils.rstrips(data['jobSizes']['data'][ji])}M)")
+                    else:
+                        row.append(f"Job {ji+1} ({utils.rstrips(data['jobSizes']['data'][ji])}M)*")
+            table.append(row)
+        table.append([" ", f"{utils.rstrips(data['memSize']['data'])}M"] + [f"Set {i+1}" for i in range(start, end)])
 
-    if all(o == -1 for o in data["sets"][data["setI"]]) or len(data["jobsAvail"]) == 0:
+        utils.displayTable(table)
+        print()
+        table = []
+
+    data["deallocating"] = not data["deallocating"]
+    if (all(o == -1 for o in data["sets"][data["setI"]]) and len(data["jobsAvail"]) == 0) and not data["deallocating"]:
         print("\nConclusion:")
         print("All jobs have been allocated." if len(data["jobsAvail"]) == 0 else "Not all jobs were executed:")
+        if all(o == -1 for o in data["sets"][data["setI"]]):
+            data['sets'].pop() # remove last set if no allocations
         for o in data["jobsAvail"]:
             print(utils.indent(f"Job {o+1} ({utils.rstrips(data['jobSizes']['data'][o])}M)"))
-        print(f"There are {len(data['sets']) - 1} sets of allocations.")
+        print(f"There are {len(data['sets'])} sets of allocations.")
     else:
-        data["setI"] += 1
+        if not data["deallocating"]:
+            data["setI"] += 1
         utils.pressEnter()
         return False
 
