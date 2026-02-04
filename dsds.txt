@@ -1,0 +1,80 @@
+Main Menu
+ - Continue / New Game
+	New Game
+		- Create new game file
+		- Run Game stage
+ - Load Game
+	- Load Save files
+	- Back or Load Save file
+		Load Save file
+			- Run current region on game stage
+		Back
+			- Go back to Main Menu
+ - Tutorial
+	- Run Tutorial
+ - Settings
+	- Audio
+	- Graphics
+	- Video
+	- Game
+ - Credits
+	- Display Credits
+ - Exit
+	- Exit Game
+
+Tutorial
+ - 5 Stages
+	A-1 Fight
+	A-2 Fight
+	A-3 Merchant
+	A-4 Event (Fixed)
+	A-5 Elite Encounter
+
+Game stage
+- Player Chooses from 4 regions
+	- Cloves
+	- Diamonds
+	- Hearts
+	- Spades
+- Each region will be locked until it is finished
+- Run region
+
+Region
+1 Fight
+2 Fight
+3 Event Encounter
+4 Fight
+5 Tavern Zone
+	- Rest or Merchant
+6 Fight
+7 Fight
+8 Event Encounter
+9 Fight
+10 Elite Encounter
+
+11 Fight
+12 Fight
+13 Event Encounter
+14 Fight
+15 Tavern Zone
+	- Rest or Merchant
+16 Fight
+17 Fight
+18 Event Encounter
+19 Fight
+20 Elite Encounter
+
+21 Fight
+22 Fight
+23 Capital Zone
+	- Event or Rest
+24 Fight
+25 Region Boss
+
+Citadel
+X-1 Fight
+X-2 Fort Zone
+	- Event, Rest, or Merchant
+X-3 Elite Encounter
+X-4 Fight
+X-5 Sovereign Boss
