@@ -31,13 +31,13 @@ Tutorial
 	A-5 Elite Encounter
 
 Game stage
-- Player Chooses from 4 regions
+ - Player Chooses from 4 regions
 	- Cloves
 	- Diamonds
 	- Hearts
 	- Spades
-- Each region will be locked until it is finished
-- Run region
+ - Each region will be locked until it is finished
+ - Run region
 
 Region
 1 Fight
