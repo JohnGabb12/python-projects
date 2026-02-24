@@ -111,7 +111,7 @@ class utils:
 def main():
     global data
     utils.clear()
-    utils.topbar("ML-M3: Act2 Fixed Partition - Best Fit")
+    utils.topbar("ML-M3: Act1 Fixed Partition - First Fit")
 
     # Memory Size
     memSize_status = utils.getinp(
@@ -236,7 +236,7 @@ def main():
     
 
     # All data collected, perform First Fit
-    print("\Best Fit")
+    print("\nFirst Fit")
     table = []
 
     # calculate set
@@ -299,6 +299,8 @@ def main():
         utils.displayTable(table)
         print()
         table = []
+    
+    print(f"{'* - deallocated jobs' if not (not data['deallocating'] and len(data['sets']) <= 1) else ''}")
 
     data["deallocating"] = not data["deallocating"]
     if (all(o == -1 for o in data["sets"][data["setI"]]) and len(data["jobsAvail"]) == 0) and not data["deallocating"]:

@@ -236,7 +236,7 @@ def main():
     
 
     # All data collected, perform First Fit
-    print("\Best Fit")
+    print("\nBest Fit")
     table = []
 
     # calculate set
@@ -303,7 +303,9 @@ def main():
         utils.displayTable(table)
         print()
         table = []
-
+    
+    print(f"{'* - deallocated jobs' if not (not data['deallocating'] and len(data['sets']) <= 1) else ''}")
+    
     data["deallocating"] = not data["deallocating"]
     if (all(o == -1 for o in data["sets"][data["setI"]]) and len(data["jobsAvail"]) == 0) and not data["deallocating"]:
         print("\nConclusion:")
