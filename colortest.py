@@ -73,3 +73,6 @@ class TextCodes:
     
     def reset(text):
         return f"{TextCodes.codes['reset']}{text}"
+
+
+print(TextCodes.color(TextCodes.color("Hello, World!", "red", bg=True, style="blink", light=True), "red"))
