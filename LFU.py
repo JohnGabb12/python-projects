@@ -20,8 +20,9 @@ data = {
     "faults": [],
     "oldFaultData": [],
     "setIndex": 0,
-    "freq": {}, # for LFU: {page: frequency}
+    "freq": [], # for LFU: {page: frequency}
     "previousFaults": {},
+    "previousFaults2": {},
     
     "mode": 0 # 0: new/clone set, 1: deallocate, 2: allocate
 }
@@ -214,29 +215,39 @@ class utils:
     def indent(data):
         return " "*4 + data
     
-    def displayTable(table, noBorder=False):
+    def displayTable(table, noBorder=[]):
         if not table:
             return
-        sanitized_table = copy.deepcopy(table)
-        for i in range(len(sanitized_table)):
-            for j in range(len(sanitized_table[i])):
-                cell = str(sanitized_table[i][j])
+        santable = copy.deepcopy(table)
+        for i in range(len(santable)):
+            for j in range(len(santable[i])):
+                cell = str(santable[i][j])
                 for code in utils.codes["reset"], *[code for color in utils.codes["colors"].values() for codes in color.values() for code in codes], *utils.codes["styles"].values():
                     cell = cell.replace(code, "")
-                sanitized_table[i][j] = cell
+                santable[i][j] = cell
         
-        max_cols = max(len(row) for row in table)
-        col_widths = [max(len(str(row[i])) for row in sanitized_table if i < len(row)) for i in range(max_cols)]
+        mcols = max(len(row) for row in table)
+        colwidths = [max(len(str(row[i])) for row in santable if i < len(row)) for i in range(mcols)]
         for irow in range(len(table)):
-            padded_row = table[irow] + [""] * (max_cols - len(table[irow]))
-            sanitized_padded_row = sanitized_table[irow] + [""] * (max_cols - len(sanitized_table[irow]))
+            padrow = table[irow] + [""] * (mcols - len(table[irow]))
+            santable_padrow = santable[irow] + [""] * (mcols - len(santable[irow]))
             result = []
-            for i, item in enumerate(padded_row):
-                formatted_item = str(sanitized_padded_row[i]).ljust(col_widths[i])
-                formatted_item = formatted_item.replace(str(sanitized_padded_row[i]), str(item))
-                result.append(formatted_item)
-                if i < len(padded_row) - 1:
-                    result.append(utils.style(" | " if noBorder else "   ", "dim"))
+            for i, item in enumerate(padrow):
+                hasBGColor = None
+                for color in utils.codes["colors"].values():
+                    for code in color["bg"]:
+                        if code in str(item):
+                            hasBGColor = code
+                            break
+                    if hasBGColor:
+                        break
+                formitem = str(santable_padrow[i]).ljust(colwidths[i])
+                formitem = formitem.replace(str(santable_padrow[i]), str(item)).replace(utils.codes["reset"], (" " if hasBGColor else "") + utils.codes["reset"]).replace(code, code + (" " if hasBGColor else ""))
+                result.append(formitem)
+                if i < len(padrow) - 1:
+                    if right_cell := (str(padrow[i+1]) if i+1 < len(padrow) else ""):
+                        right_cell_has_bg = any(code in right_cell for color in utils.codes["colors"].values() for code in color["bg"])
+                        result.append(utils.style(f"{'' if hasBGColor else ' '}{'|' if irow not in noBorder else ' '}{'' if right_cell_has_bg else ' '}", "dim"))
             print("".join(result))
             
 
@@ -335,18 +346,14 @@ def main():
     def getCurrentRequestedPage():
         return data["reqPages"]["data"][data["setIndex"]]
     
-    data["previousFaults"] = {page: -1 for page in data["reqPages"]["data"][:data["setIndex"]]}
+    data["previousFaults"] = {page: -1 for page in data["reqPages"]["data"][:data["setIndex"]+1]}
 
     # new/clone set
     if data["mode"] == 0:
-        if len(data["sets"]) == 0:
-            data["sets"].append([])
-            data["faults"].append(-1)
-            data["oldFaultData"].append(-1)
-        else:
-            data["sets"].append(copy.deepcopy(data["sets"][-1]))
-            data["faults"].append(-1)
-            data["oldFaultData"].append(-1)
+        data["sets"].append([] if len(data["sets"]) == 0 else copy.deepcopy(data["sets"][-1]))
+        data["faults"].append(-1)
+        data["oldFaultData"].append(-1)
+        data["freq"].append(-1)
     
     # deallocate
     if data["mode"] == 1:
@@ -354,27 +361,15 @@ def main():
             # get least recently used page
 
             count = {page: 0 for page in data["sets"][-1]}
-            reqData = data["reqPages"]["data"][data["setIndex"]]
+            p = []
             
-
             for page in data["sets"][-1]:
-                if page == reqData: # Hit
-                    break
-                else:
-                    for o in range(data["previousFaults"][page], data["setIndex"]):
-                        if data["reqPages"]["data"][o] == page:
-                            count[page] += 1
-                            data["previousFaults"][page] = o
-                            break
-                print(page, data["previousFaults"][page], count[page], data["setIndex"])
-            
-            # if page counts are the same, use least recently used among them
+                for o in range(data["previousFaults"][page], data["setIndex"]):
+                    if data["reqPages"]["data"][o+1] == page:
+                        count[page] += 1
+                        data["previousFaults"][page] = o if data["previousFaults"][page] not in p else -1
+                        p.append(o)
             lfu = min(count, key=count.get)
-            
-
-            
-            # if gotData in data["previousHits"]:
-            #     data["previousHits"][gotData] = data["setIndex"]
 
             if not getCurrentRequestedPage() in data["sets"][-1]:
                 pgs = {}
@@ -384,9 +379,8 @@ def main():
                             pgs[page] = data["setIndex"] - o
                             break
                 data["faults"][-1] = max(pgs, key=pgs.get)
-        else:
-            if not getCurrentRequestedPage() in data["sets"][-1]:
-                data["faults"][-1] = getCurrentRequestedPage()
+        elif not getCurrentRequestedPage() in data["sets"][-1]:
+            data["faults"][-1] = getCurrentRequestedPage()
     
     # allocate
     if data["mode"] == 2:
@@ -402,10 +396,30 @@ def main():
                     if data["sets"][-1][i] == lru:
                         data["sets"][-1][i] = cur
                         break
-    
-    print("Legend:\n",utils.color("Green", "green"), ": Requested Page\n", utils.color("Red", "red", light=True), ": Page Fault\n", utils.color(utils.style("Blinking Red", "blink"),"red"), ": To be Deallocated\n", utils.color("Red Background", "red", bg=True), ": Deallocated Page\n")
 
-    frameTable = []+[["LFU"]+[utils.color(data["reqPages"]["data"][i], "yellow", light=True) for i in range(data["setIndex"]+1)]]
+        # Display freq
+        data["freq"] = [-1]*(data["setIndex"]+1)
+        count = {page: 0 for page in data["sets"][-1]}
+        p = []
+
+        for page in data["sets"][-1]:
+            for o in range(data["previousFaults"][page], data["setIndex"]):
+                if data["reqPages"]["data"][o+1] == page:
+                    count[page] += 1
+                    data["previousFaults"][page] = o if data["previousFaults"][page] not in p else -1
+                    p.append(o)
+        
+        p = []
+        for o in range(data["setIndex"], -1, -1):
+            if data["reqPages"]["data"][o] in count and data["reqPages"]["data"][o] not in p:
+                data["freq"][o] = count[data["reqPages"]["data"][o]]
+                p.append(data["reqPages"]["data"][o])
+
+    
+    print("Legend:\n",utils.color("Green", "green"), ": Requested Page\n", utils.color("Red", "red", light=True), ": Page Fault\n", utils.color(utils.style("Blinking Red", "blink"),"red"), ": To be Deallocated\n", utils.color("Red Background", "red", bg=True), ": Deallocated Page\n", utils.style("Dimmed", "dim"), ": Frequency\n")
+    
+    frameTable = []+[[" "]+[utils.style(i, "dim") if i != -1 else " " for i in data["freq"]]]
+    frameTable += [["LFU"]+[utils.color(data["reqPages"]["data"][i], "yellow", light=True) for i in range(data["setIndex"]+1)]]
     # Frame1 | Set1 | Set2 | ...
     for i in range(data["framesN"]["data"]):
         row = [utils.color(f"Frame {i+1}", "cyan", style="bold")]
@@ -431,7 +445,7 @@ def main():
         frameTable.append(row)
     frameTable.append([utils.color("PF", "red", light=True)]+[utils.color("*", "red", light=True) if data["faults"][i] != -1 and (data["setIndex"] != i or data["mode"] == 2) else " " for i in range(len(data["sets"]))])
 
-    utils.displayTable(frameTable)
+    utils.displayTable(frameTable, noBorder=[0])
     
     setIndexPast = data["setIndex"] >= data["reqPagesN"]["data"] - 1
 
@@ -444,7 +458,7 @@ def main():
         utils.displayTable(table)
         return True
 
-    print("Mode: ", utils.color("Allocate", "green") if data["mode"] == 0 else utils.color("Deallocate", "red", light=True) if data["mode"] == 1 else utils.color("Allocate", "green"))
+    print("Mode: ", utils.color("New/Next", "yellow") if data["mode"] == 0 else utils.color("Deallocate", "red", light=True) if data["mode"] == 1 else utils.color("Allocate", "green"))
     if data["setIndex"] > 0:
         utils.pressEnter()
     else:
