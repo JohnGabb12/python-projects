@@ -403,11 +403,14 @@ def main():
         p = []
 
         for page in data["sets"][-1]:
-            for o in range(data["previousFaults"][page], data["setIndex"]):
-                if data["reqPages"]["data"][o+1] == page:
+            for o in range(data["setIndex"], data["previousFaults"][page], -1):
+                if data["reqPages"]["data"][o] == page:
                     count[page] += 1
                     data["previousFaults"][page] = o if data["previousFaults"][page] not in p else -1
                     p.append(o)
+                if page not in data["sets"][o-1]:
+                    break
+
         
         p = []
         for o in range(data["setIndex"], -1, -1):
