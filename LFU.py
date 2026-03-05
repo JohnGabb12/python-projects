@@ -91,6 +91,7 @@ class utils:
         return s
     
     def color(text, color, style=None, bg=False, light=False):
+        text = str(text)
         color_code = utils.codes["colors"].get(color, None)
         if color_code:
             if bg:
@@ -98,10 +99,11 @@ class utils:
             else:
                 code = color_code["text"][1] if light else color_code["text"][0]
             style_code = utils.codes["styles"].get(style, "") if style else ""
-            return f"{style_code}{code}{text}{utils.codes['reset']}"
+            return f"{style_code}{code}{text}{utils.codes['reset'] if not utils.codes['reset'] in text else ''}"
         return text
     
     def style(text, style, color=None, bg=False, light=False):
+        text = str(text)
         style_code = utils.codes["styles"].get(style, "")
         if color:
             color_code = utils.codes["colors"].get(color, None)
@@ -111,7 +113,7 @@ class utils:
                 else:
                     code = color_code["text"][1] if light else color_code["text"][0]
                 return f"{style_code}{code}{text}{utils.codes['reset']}"
-        return f"{style_code}{text}{utils.codes['reset']}"
+        return f"{style_code}{text}{utils.codes['reset']}{utils.codes['reset'] if not utils.codes['reset'] in text else ''}"
     
     def resetText(text):
         return f"{utils.codes['reset']}{text}"
@@ -255,7 +257,7 @@ class utils:
 def main():
     global data
     utils.clear()
-    utils.topbar("ML-M4: ACT5 - Least Frequently Used")
+    utils.topbar("FL-M4: ACT1 - Least Frequently Used")
 
     def getindex(pageIndex):
         if pageIndex <= 0:
