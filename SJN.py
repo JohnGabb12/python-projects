@@ -15,8 +15,10 @@ data = {
     "burstTimes": {"data" : [], "filled" : False},
 
     # process data
+    "finishedProcesses": [],
     "processes": [],
     "timeCompleted": [],
+    "completionTimes": [],
     "currentTime": 0
 }
 
@@ -203,6 +205,10 @@ class utils:
             data[variableName]["filled"] += 1
         return "input"
 
+    def round(num, digits=0):
+        multiplier = 10 ** digits
+        return int(num * multiplier + 0.5) / multiplier    
+
     def pressEnter():
         print("Press enter to continue...", end="")
         input()
@@ -307,18 +313,49 @@ def main():
             utils.pressEnter()
             return False
 
-    print("Timeline starts at 0")
+    # Calculation
+    currentData = []
+    for i in range(data["processN"]["data"]):
+        if data["arrivalTimes"]["data"][i] <= data["currentTime"] and f"P{i+1}" not in data["finishedProcesses"]:
+            currentData.append((data["burstTimes"]["data"][i], data["arrivalTimes"]["data"][i], f"P{i+1}"))
+    currentData.sort(key=lambda x: (x[0], x[1]))
+    if currentData:
+        burstTime, arrivalTime, processName = currentData[0]
+        if processName not in data["finishedProcesses"]:
+            data["processes"].append(utils.color(processName,'blue',light=True))
+            data["timeCompleted"].append(data["currentTime"] + burstTime)
+            data["currentTime"] += burstTime
+            data["finishedProcesses"].append(processName)
+            data["completionTimes"].append(data["currentTime"])
+    else:
+        d = []
+        for o in range(data["processN"]["data"]):
+            if not f"P{o+1}" in data["finishedProcesses"]:
+                d.append(o)
+        data["currentTime"] = min([data["arrivalTimes"]["data"][o] for o in d])
+        data["processes"].append(utils.color("Idle",'red',light=True))
+        data["timeCompleted"].append(data["currentTime"])
+
+    print("\nTimeline starts at 0")
     table = []
-    table.append([utils.color("Process",'blue',light=True)] + [data["processes"][i] if len(data["processes"]) > i else utils.color("--",'red') for i in range(data["processN"]["data"])])
-    table.append([utils.color("Time Completed",'green',light=True)] + [data["timeCompleted"][i] if len(data["timeCompleted"]) > i else utils.color("--",'red') for i in range(data["processN"]["data"])])
+    table.append([utils.color("Process",'blue',light=True)] + [o for o in data["processes"]])
+    table.append([utils.color("Time Completed",'green',light=True)] + [o for o in data["timeCompleted"]])
     utils.displayTable(table)
 
-    if len(data["processes"]) < data["processN"]["data"]:
-        
-
-
+    if len(data["finishedProcesses"]) < data["processN"]["data"]:
+        utils.pressEnter()
         return False # skip ya
     
+    tat = [data["completionTimes"][i] - data["arrivalTimes"]["data"][i] for i in range(data["processN"]["data"])]
+    wt = [tat[i] - data["burstTimes"]["data"][i] for i in range(data["processN"]["data"])]
+
+    print()
+    # print(tat,wt,data["completionTimes"],data["arrivalTimes"]["data"],data["burstTimes"]["data"])
+    table = []
+    table.append([utils.color("Average Turnaround Time",'green',light=True), utils.rstrips(utils.round(sum(tat)/len(tat), 2))])
+    table.append([utils.color("Average Waiting Time",'green',light=True), utils.rstrips(utils.round(sum(wt)/len(wt), 2))])
+
+    utils.displayTable(table, noBorder=[0,1])
     return True
     
 while not complete:
