@@ -283,7 +283,7 @@ def main():
 
     if data["arrivalTimes"]["filled"] < data["processN"]["data"]:
         tempDataStatus = utils.getinp(
-            prompt = f"\n{utils.color("ARRIVAL TIME",'green',light=True)}\nEnter {utils.color('Arrival','green',light=True)} time for {utils.color(f'P'+str(data['arrivalTimes']['filled'] + 1),'blue',light=True)}: ",
+            prompt = f"\n{utils.color('ARRIVAL TIME','green',light=True)}\nEnter {utils.color('Arrival','green',light=True)} time for {utils.color(f'P'+str(data['arrivalTimes']['filled'] + 1),'blue',light=True)}: ",
             name = f"Arrival Time for P{data['arrivalTimes']['filled'] + 1}",
             type = "int",
             variableName = "arrivalTimes",
@@ -299,7 +299,7 @@ def main():
         
     if data["burstTimes"]["filled"] < data["processN"]["data"]:
         tempDataStatus = utils.getinp(
-            prompt = f"\n{utils.color("BURST TIME",'yellow',light=True)}\nEnter {utils.color('Burst','yellow',light=True)} time for {utils.color(f'P'+str(data['burstTimes']['filled'] + 1),'blue',light=True)}: ",
+            prompt = f"\n{utils.color('BURST TIME','yellow',light=True)}\nEnter {utils.color('Burst','yellow',light=True)} time for {utils.color(f'P'+str(data['burstTimes']['filled'] + 1),'blue',light=True)}: ",
             name = f"Burst Time for P{data['burstTimes']['filled'] + 1}",
             type = "int",
             variableName = "burstTimes",
