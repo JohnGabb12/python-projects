@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Application Form</title>
+
+    <style type="text/css">
+        label,
+        th {
+            color: white;
+            font-size: 1.5em;
+            /* font-family: Tahoma, sans-serif; */
+        }
+
+        td {
+            padding: 0.5em;
+        }
+
+        th {
+            font-size: 2.8em;
+        }
+
+        form {
+            background-color: #105b67;
+            margin: auto;
+            max-width: 1680px;
+            padding: 1em;
+            display: inline-block;
+        }
+
+        input {
+            border: none;
+            border-radius: 2px;
+        }
+
+        input[type="submit"],
+        input[type="reset"] {
+            background-color: #d94c04;
+            color: white;
+            padding: 0.3em 5em;
+            margin-right: 0.6em;
+        }
+        legend {
+            color: white;
+        }
+        fieldset {
+            margin-bottom: 1em;
+            border-radius: 1em;
+        }
+        h1 {
+            color: white;
+            font-size: 3em;
+            text-align: center;
+            margin-bottom: 0;
+        }
+        table {
+            width: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <form action="#" method="post">
+        <h1>Application Form</h1>
+        <fieldset>
+            <legend>Personal Information</legend>
+            <table>
+                <tr>
+                    <td>
+                        <label for="fname">First Name:</label>
+                        <input type="text" id="fname" name="firstName" required>
+                    </td>
+                    <td>
+                        <label for="lname">Last Name:</label>
+                        <input type="text" id="lname" name="lastName" required>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <label for="dofbirth">Date of Birth:</label>
+                        <input type="date" id="dofbirth" name="dateOfBirth" placeholder="mm / dd / yyyy" required>
+                    </td>
+                    <td>
+                        <label for="age">Age:</label>
+                        <input type="number" id="age" name="age" required>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <label for="gender">Gender:</label>
+                        <select name="gender" id="gender" required>
+                            <option value="Male" selected>Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </td>
+                    <td>
+                        <label for="email">Email Address:</label>
+                        <input type="email" id="email" name="email" placeholder="Enter email address" required>
+                    </td>
+                </tr>
+            </table>
+        </fieldset>
+        <fieldset>
+            <legend>Position and Skills</legend>
+            <table>
+                <tr>
+                    <td>
+                        <label>Positions Available:</label>
+                        <input type="radio" id="juniordeveloper" name="position" value="Junior Developer" required>
+                        <label for="juniordeveloper">Junior Developer</label>
+                        <input type="radio" id="midleveldeveloper" name="position" value="Mid-level Developer" required>
+                        <label for="midleveldeveloper">Mid-level Developer</label>
+                        <input type="radio" id="seniordeveloper" name="position" value="Senior Developer" required>
+                        <label for="seniordeveloper">Senior Developer</label>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <label>Programming Languages:</label>
+                        <input type="checkbox" id="java" name="languages" value="Java">
+                        <label for="java">Java</label>
+                        <input type="checkbox" id="javascript" name="languages" value="JavaScript">
+                        <label for="javascript">JavaScript</label>
+                        <input type="checkbox" id="python" name="languages" value="Python">
+                        <label for="python">Python</label>
+                    </td>
+                </tr>
+            </table>
+            
+            
+        </fieldset>
+        <fieldset>
+            <legend>Account Security</legend>
+            <table>
+                <tr>
+                    <td>
+                        <label for="password">Password:</label>
+                        <input type="password" name="password" id="password" required>
+                    </td>
+                    <td>
+                        <label for="confirmpassword">Confirm Password:</label>
+                        <input type="password" name="confirmPassword" id="confirmpassword" required>
+                    </td>
+                </tr>
+            </table>
+        </fieldset>
+        <input type="submit" value="Submit">
+        <input type="reset" value="Reset">
+    </form>
+</body>
+
+</html>
